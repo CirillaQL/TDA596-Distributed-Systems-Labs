@@ -1,0 +1,6 @@
+[project]
+name = "lab1-api-tests"
+version = "0.1.0"
+description = "Black-box HTTP and pub-sub conformance tests for Lab 1"
+requires-python = ">=3.12"
+dependencies = []

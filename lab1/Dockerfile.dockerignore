@@ -1,0 +1,6 @@
+**
+!go.mod
+!lab1/
+!lab1/**/*.go
+!lab1/server/
+!lab1/utils/

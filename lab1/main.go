@@ -5,7 +5,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/CirillaQL/TDA596-Distributed-Systems-Labs.git/lab1/server"
+	"github.com/CirillaQL/TDA596-Distributed-Systems-Labs/lab1/server"
 )
 
 func main() {

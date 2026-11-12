@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/CirillaQL/TDA596-Distributed-Systems-Labs.git/lab1/utils"
+	"github.com/CirillaQL/TDA596-Distributed-Systems-Labs/lab1/utils"
 )
 
 var AllowedExtensions = []string{".html", ".txt", ".gif", ".jpeg", ".jpg", ".css"}

@@ -80,14 +80,14 @@ class Lab1Tests(unittest.TestCase):
             response = self.client.request(
                 "POST", "/unsubscribe?" + urlencode({"topic": topic, "id": subscriber_id})
             )
-            self.assertIn(response.status, (200, 400), "subscription cleanup failed")
+            self.assertIn(response.status, (200, 404), "subscription cleanup failed")
 
     def topic(self, name="news"):
         return f"{self.prefix}/{name}"
 
     def subscribe(self, topic):
         response = self.client.request("POST", "/subscribe?" + urlencode({"topic": topic}))
-        self.assertEqual(response.status, 200)
+        self.assertEqual(response.status, 201)
         self.assertEqual(response.content_type.split(";")[0], "application/json")
         subscriber_id = json.loads(response.body)["id"]
         self.assertIs(type(subscriber_id), int)
@@ -202,11 +202,13 @@ class Lab1Tests(unittest.TestCase):
                     query["id"] = value
                 with self.subTest(route=route, id=value):
                     self.assertEqual(self.client.request(method, "/" + route + "?" + urlencode(query)).status, 400)
-        self.assertEqual(self.events(self.topic("wrong"), subscriber_id).status, 400)
+            unknown = "/" + route + "?" + urlencode({"topic": topic, "id": 999999})
+            self.assertEqual(self.client.request(method, unknown).status, 404)
+        self.assertEqual(self.events(self.topic("wrong"), subscriber_id).status, 404)
         self.unsubscribe(topic, subscriber_id)
-        self.assertEqual(self.events(topic, subscriber_id).status, 400)
+        self.assertEqual(self.events(topic, subscriber_id).status, 404)
         path = "/unsubscribe?" + urlencode({"topic": topic, "id": subscriber_id})
-        self.assertEqual(self.client.request("POST", path).status, 400)
+        self.assertEqual(self.client.request("POST", path).status, 404)
 
     def test_07_broadcast_isolation_and_membership(self):
         topic, other = self.topic(), self.topic("other")
@@ -224,7 +226,7 @@ class Lab1Tests(unittest.TestCase):
         self.assertEqual(self.message(self.events(topic, late))[1], b"after late subscription")
         self.unsubscribe(topic, first)
         self.publish(topic, b"after unsubscribe")
-        self.assertEqual(self.events(topic, first).status, 400)
+        self.assertEqual(self.events(topic, first).status, 404)
         self.assertEqual(self.message(self.events(topic, second))[1], b"after late subscription")
         self.assertEqual(self.message(self.events(topic, second))[1], b"after unsubscribe")
 
@@ -279,7 +281,7 @@ class Lab1Tests(unittest.TestCase):
             time.sleep(0.2)
             self.assertFalse(pending.done())
             self.unsubscribe(topic, subscriber_id)
-            self.assertEqual(pending.result(timeout=self.client.timeout).status, 400)
+            self.assertEqual(pending.result(timeout=self.client.timeout).status, 404)
 
     def test_13_waiting_polls_leave_publish_capacity(self):
         topic = self.topic()
@@ -301,7 +303,7 @@ class Lab1Tests(unittest.TestCase):
                 self.publish(topic, f"{index}-{i}".encode())
                 self.message(self.events(topic, subscriber_id))
                 self.unsubscribe(topic, subscriber_id)
-                self.assertEqual(self.events(topic, subscriber_id).status, 400)
+                self.assertEqual(self.events(topic, subscriber_id).status, 404)
 
         with ThreadPoolExecutor(max_workers=4) as pool:
             list(pool.map(worker, range(4)))

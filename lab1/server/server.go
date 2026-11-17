@@ -138,7 +138,7 @@ func (s *Server) handleBroker(conn net.Conn, req *http.Request) {
 	switch req.URL.Path {
 	case "/subscribe":
 		id, _ := s.broker.Subscribe(topic)
-		utils.Send200OK(conn, fmt.Sprintf(`{"id":%d}`, id), "application/json")
+		utils.SendHTTPResponse(conn, http.StatusCreated, "Created", fmt.Sprintf(`{"id":%d}`, id), "application/json")
 	case "/publish":
 		data, err := io.ReadAll(req.Body)
 		if err != nil {
@@ -155,7 +155,7 @@ func (s *Server) handleBroker(conn net.Conn, req *http.Request) {
 		}
 		if req.URL.Path == "/unsubscribe" {
 			if !s.broker.Unsubscribe(topic, id) {
-				utils.Send400BadRequest(conn, "Invalid subscriber id")
+				utils.Send404NotFound(conn, "Subscriber not found")
 				return
 			}
 			utils.Send200OK(conn, "Unsubscribed", "text/plain")
@@ -164,15 +164,15 @@ func (s *Server) handleBroker(conn net.Conn, req *http.Request) {
 
 		events := s.broker.Event(topic, id)
 		if events == nil {
-			utils.Send400BadRequest(conn, "Invalid subscriber id")
+			utils.Send404NotFound(conn, "Subscriber not found")
 			return
 		}
 		msg, status := s.waitForEvent(events, 30*time.Second)
 		switch status {
 		case http.StatusNoContent:
 			utils.SendHTTPResponse(conn, 204, "No Content", "", "text/plain")
-		case http.StatusBadRequest:
-			utils.Send400BadRequest(conn, "Subscription cancelled")
+		case http.StatusNotFound:
+			utils.Send404NotFound(conn, "Subscription cancelled")
 		default:
 			body, err := json.Marshal(msg)
 			if err != nil {
@@ -192,7 +192,7 @@ func (s *Server) waitForEvent(events <-chan Message, timeout time.Duration) (Mes
 	select {
 	case msg, ok := <-events:
 		if !ok {
-			return Message{}, http.StatusBadRequest
+			return Message{}, http.StatusNotFound
 		}
 		return msg, http.StatusOK
 	case <-timer.C:

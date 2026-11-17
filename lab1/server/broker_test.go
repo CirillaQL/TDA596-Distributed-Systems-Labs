@@ -37,19 +37,22 @@ func TestBrokerRequests(t *testing.T) {
 		if route == "events" {
 			method = "GET"
 		}
-		for _, id := range []string{"", "abc", "-1", "999999"} {
+		for _, id := range []string{"", "abc", "-1", "9999999999999999999999999"} {
 			if status, _ := request(method, "/"+route+"?topic=news&id="+id, ""); status != 400 {
 				t.Fatalf("%s invalid id %q: status=%d", route, id, status)
 			}
 		}
+		if status, _ := request(method, "/"+route+"?topic=news&id=999999", ""); status != 404 {
+			t.Fatalf("%s unknown subscriber: status=%d; want 404", route, status)
+		}
 	}
 	status, body := request("POST", "/subscribe?topic=news", "")
 	var subscription struct{ ID int }
-	if status != 200 || json.Unmarshal([]byte(body), &subscription) != nil {
+	if status != 201 || json.Unmarshal([]byte(body), &subscription) != nil {
 		t.Fatalf("subscribe status=%d body=%q", status, body)
 	}
 	path := fmt.Sprintf("?topic=news&id=%d", subscription.ID)
-	if status, _ := request("GET", fmt.Sprintf("/events?topic=other&id=%d", subscription.ID), ""); status != 400 {
+	if status, _ := request("GET", fmt.Sprintf("/events?topic=other&id=%d", subscription.ID), ""); status != 404 {
 		t.Fatalf("wrong topic: status=%d", status)
 	}
 	data := "\x00\xffbinary\x01"
@@ -64,10 +67,10 @@ func TestBrokerRequests(t *testing.T) {
 	if status, _ := request("POST", "/unsubscribe"+path, ""); status != 200 {
 		t.Fatalf("unsubscribe status=%d", status)
 	}
-	if status, _ := request("POST", "/unsubscribe"+path, ""); status != 400 {
+	if status, _ := request("POST", "/unsubscribe"+path, ""); status != 404 {
 		t.Fatalf("repeat unsubscribe status=%d", status)
 	}
-	if status, _ := request("GET", "/events"+path, ""); status != 400 {
+	if status, _ := request("GET", "/events"+path, ""); status != 404 {
 		t.Fatalf("cancelled events status=%d", status)
 	}
 }
@@ -84,7 +87,7 @@ func TestEventWait(t *testing.T) {
 		t.Fatal("worker slot not reacquired after timeout")
 	}
 	close(events)
-	if _, status := s.waitForEvent(events, time.Second); status != http.StatusBadRequest {
+	if _, status := s.waitForEvent(events, time.Second); status != http.StatusNotFound {
 		t.Fatalf("cancelled subscription status=%d", status)
 	}
 }

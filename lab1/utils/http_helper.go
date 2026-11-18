@@ -5,7 +5,7 @@ import (
 	"net"
 )
 
-// HTTP Response 助手函数：统一发送格式化的 HTTP 响应
+// HTTP Response helper functions
 func SendHTTPResponse(conn net.Conn, statusCode int, statusText string, body string, contentType string) {
 	if contentType == "" {
 		contentType = "text/plain"
